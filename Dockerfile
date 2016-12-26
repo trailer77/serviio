@@ -1,69 +1,26 @@
-FROM lsiobase/alpine
-MAINTAINER trailer ;)
+FROM jrottenberg/ffmpeg
+MAINTAINER headbanger84
 
-# set version label
-ARG BUILD_DATE
-ARG VERSION
-LABEL build_version="Linuxserver.io version:- ${VERSION} Build-date:- ${BUILD_DATE}"
+RUN apt-get update && \
+	apt-get install -y openjdk-8-jdk-headless curl tar
+ #   apt-get autoremove && \
+ #   apt-get clean
 
-# package version
-ARG SERVIIO_VER="1.8"
+ENV SERVIIO_VERSION 1.7.1
 
-# environment settings
-ENV JAVA_HOME="/usr/bin/java"
+RUN DIR=$(mktemp -d) && cd ${DIR} && \
+    curl -Os http://download.serviio.org/releases/serviio-${SERVIIO_VERSION}-linux.tar.gz && \
+    tar zxvf serviio-${SERVIIO_VERSION}-linux.tar.gz && \
+    mv serviio-${SERVIIO_VERSION} /opt/serviio && \
+    rm -rf ${DIR}
 
-# install packages
-RUN \
- apk add --no-cache \
-	ffmpeg \
-	jasper \
-	jpeg \
-	lcms2 \
-	openjdk8-jre
+#VOLUME /opt/serviio/log
+#VOLUME /opt/serviio/library
 
-# install build packages
-RUN \
- apk add --no-cache --virtual=build-dependencies \
-	curl \
-	gcc \
-	g++ \
-	jasper-dev \
-	jpeg-dev \
-	lcms2-dev \
-	tar && \
+# serviio requires TCP port 8895 and UDP 1900 for content and
+#  23423 (console) and 23424 (API & mediabrowser) api
+EXPOSE 23424:23424/tcp 23423:23423/tcp 8895:8895/tcp 1900:1900/udp
 
-# install serviio app
- mkdir -p \
-	/app/serviio && \
- curl -o \
- /tmp/serviio.tar.gz -L \
-	http://download.serviio.org/releases/serviio-$SERVIIO_VER-linux.tar.gz && \
-	
- tar xf /tmp/serviio.tar.gz -C \
-	/app/serviio --strip-components=1 && \
-
-# fetch dcraw
- curl -o \
- /usr/bin/dcraw.c -L \
-	http://www.cybercom.net/~dcoffin/dcraw/dcraw.c && \
-
-# compile dcraw
- cd /usr/bin && \
- gcc -o dcraw -O4 dcraw.c -lm -ljasper -ljpeg -llcms2 && \
-
-# cleanup
- apk del --purge \
-	build-dependencies && \
- rm -rf \
-	/tmp/*
-
-# change abc home folder
-RUN \
- usermod -d /config/serviio abc
-
-# add local files
-#COPY root/ /
-
-# ports and volumes
-EXPOSE 23423/tcp 23424/tcp 8895/tcp 1900/udp
+WORKDIR /opt/serviio
+ENTRYPOINT ["bin/serviio.sh"]
 VOLUME /config /transcode /log /media
