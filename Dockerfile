@@ -62,7 +62,7 @@ RUN \
  usermod -d /config/serviio abc
 
 # add local files
-COPY root/ /
+#COPY root/ /
 
 # ports and volumes
 EXPOSE 23423/tcp 23424/tcp 8895/tcp 1900/udp
